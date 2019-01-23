@@ -1,0 +1,85 @@
+stages:
+  - npm
+  - build
+  - deploy
+
+image: node:latest
+cache:
+  key: ${CI_COMMIT_REF_SLUG}
+  paths:
+    - node_modules/
+  policy: pull
+before_script:
+  - npm install
+
+npm_install:
+  stage: npm
+  except:
+    - master
+  cache:
+    key: ${CI_COMMIT_REF_SLUG}
+    paths:
+      - node_modules/
+  script:
+    - npm install
+
+build_web:
+  stage: build
+  except:
+    - master
+  variables:
+    GIT_STRATEGY: clone
+  before_script:
+    - apt-get -qq update
+    - apt-get install -y git
+  script:
+    - git checkout $CI_COMMIT_REF_NAME
+    - rm -rf .git
+    - npm install
+    - npm run-script build
+    - cd build
+    - git init
+    - git config --global user.email "Autobuilder@example.org"
+    - git config --global user.name "Autobuilder Bot"
+    - git add . && git commit -a -m "Building docs, build $CI_COMMIT_REF_NAME"
+
+deploy_github:
+  stage: deploy
+  cache: {}
+  only:
+    - master
+  variables:
+    GIT_STRATEGY: clone
+  before_script:
+    - apt-get -qq update
+    - apt-get install -y git 
+  script:
+    - git remote rm github || true
+    - git remote add github https://drgroot:$GITHUB_TOKEN@github.com/drgroot/yusufali.git
+    - git checkout $CI_COMMIT_REF_NAME
+    - git push github $CI_COMMIT_REF_NAME --force
+
+deploy_web:
+  stage: deploy
+  cache: {}
+  variables:
+    GIT_STRATEGY: clone
+  only:
+    - master
+  before_script:
+    - apt-get -qq update
+    - apt-get install -y git
+  script:
+    - git checkout $CI_COMMIT_REF_NAME
+    - rm -rf .git
+    - npm install
+    - npm run-script build
+    - cd build
+    - git init
+    - git config --global user.email "Autobuilder@example.org"
+    - git config --global user.name "Autobuilder Bot"
+    - git add . && git commit -a -m "Building docs, build $CI_COMMIT_REF_NAME"
+    - git remote add origin https://drgroot:$GITHUB_TOKEN@github.com/drgroot/yusufali.git
+    - git checkout -b gh-pages
+    - git push origin gh-pages --force
+
