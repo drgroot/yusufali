@@ -6,7 +6,7 @@ cache:
 
 build:
   script:
-    - npm run build
+    - NODE_ENV=production npm run build
 
 audit:
   allow_failure: true
